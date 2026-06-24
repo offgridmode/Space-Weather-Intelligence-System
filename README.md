@@ -9,28 +9,30 @@ A research-grade AI system for detecting, classifying, nowcasting, and forecasti
 ## Table of Contents
 
 1. [What Is This Project?](#1-what-is-this-project)
-2. [Project Goals](#2-project-goals)
-3. [Data Sources](#3-data-sources)
-4. [System Architecture (Big Picture)](#4-system-architecture-big-picture)
-5. [Stage 1: Data Engineering](#5-stage-1-data-engineering)
-6. [Stage 2: Detection Pipeline](#6-stage-2-detection-pipeline)
-7. [Stage 3: Classification Pipeline](#7-stage-3-classification-pipeline)
-8. [Stage 4: Master Flare Catalog](#8-stage-4-master-flare-catalog)
-9. [Stage 5: Physics-Informed Feature Engineering](#9-stage-5-physics-informed-feature-engineering)
-10. [Stage 6: Nowcasting System](#10-stage-6-nowcasting-system)
-11. [Stage 7: Forecasting System](#11-stage-7-forecasting-system)
-12. [Model Benchmarking Strategy](#12-model-benchmarking-strategy)
-13. [Deep Learning Experiments](#13-deep-learning-experiments)
-14. [Advanced Temporal Models](#14-advanced-temporal-models)
-15. [Transformer-Based Models](#15-transformer-based-models)
-16. [Physics-Informed Learning (PINN)](#16-physics-informed-learning-pinn)
-17. [Less Common Research Models](#17-less-common-research-models)
-18. [Final Recommended Architecture](#18-final-recommended-architecture)
-19. [Evaluation Strategy](#19-evaluation-strategy)
-20. [Deployment & Dashboard](#20-deployment--dashboard)
-21. [Ablation Study Plan](#21-ablation-study-plan)
-22. [Research-Grade Experimentation Plan](#22-research-grade-experimentation-plan)
-23. [Implementation Roadmap](#23-implementation-roadmap)
+2. [Problem Statement (from Official Slides)](#2-problem-statement-from-official-slides)
+3. [Project Goals](#3-project-goals)
+4. [Project Folder Structure](#4-project-folder-structure)
+5. [Data Sources](#5-data-sources)
+6. [System Architecture (Big Picture)](#6-system-architecture-big-picture)
+7. [Stage 1: Data Engineering](#7-stage-1-data-engineering)
+8. [Stage 2: Detection Pipeline](#8-stage-2-detection-pipeline)
+9. [Stage 3: Classification Pipeline](#9-stage-3-classification-pipeline)
+10. [Stage 4: Master Flare Catalog](#10-stage-4-master-flare-catalog)
+11. [Stage 5: Physics-Informed Feature Engineering](#11-stage-5-physics-informed-feature-engineering)
+12. [Stage 6: Nowcasting System](#12-stage-6-nowcasting-system)
+13. [Stage 7: Forecasting System](#13-stage-7-forecasting-system)
+14. [Model Benchmarking Strategy](#14-model-benchmarking-strategy)
+15. [Deep Learning Experiments](#15-deep-learning-experiments)
+16. [Advanced Temporal Models](#16-advanced-temporal-models)
+17. [Transformer-Based Models](#17-transformer-based-models)
+18. [Physics-Informed Learning (PINN)](#18-physics-informed-learning-pinn)
+19. [Advanced Techniques from Research Papers](#19-advanced-techniques-from-research-papers)
+20. [Final Recommended Architecture](#20-final-recommended-architecture)
+21. [Evaluation Strategy](#21-evaluation-strategy)
+22. [Deployment & Dashboard](#22-deployment--dashboard)
+23. [Ablation Study Plan](#23-ablation-study-plan)
+24. [Research-Grade Experimentation Plan](#24-research-grade-experimentation-plan)
+25. [Implementation Roadmap](#25-implementation-roadmap)
 
 ---
 
@@ -47,7 +49,84 @@ Think of it as a "weather radar" for solar storms — but powered by machine lea
 
 ---
 
-## 2. Project Goals
+## 2. Problem Statement (from Official Slides)
+
+The problem statement is derived from the official ISRO Aditya-L1 problem statement slides and consists of four independent but connected modules. The architecture must NOT treat this as only a time-series forecasting problem — it is fundamentally **Detection + Classification + Nowcasting + Forecasting** with separate objectives and evaluation criteria.
+
+### Slide 1: Solar Flare Detection
+
+The slide shows a solar X-ray flux time series with key labeled points:
+- **Green = Start** of flare
+- **Black = Peak** of flare
+- **Red = Stop** of flare
+
+**Required outputs** for every detected flare:
+- Start Time, Peak Time, End Time, Duration, Peak Flux
+
+**Key requirements:**
+- Detection must work on SoLEXS **independently** and HEL1OS **independently**
+- Milestone 1: Build detection algorithms for SoLEXS and HEL1OS separately
+- Milestone 2: Generate a unified Master Flare Catalog
+- Must detect small, medium, and large flares while avoiding false alarms from noise spikes
+
+### Slide 2: Solar Flare Prediction
+
+The slide separates observed data from future data with a vertical dashed line at "Current Time":
+- **Left**: Observed Flux History (available to model)
+- **Right**: Future/Unseen Region (must be forecast)
+- **Highlighted** red region: **Precursor Heating Signature** before major flare onset
+
+**Forecasting objectives - Milestone 1:** Predict probability of a flare occurring in the next N minutes (15, 30, 60, or custom N-minute horizon)
+
+**Forecasting objectives - Milestone 2:** Predict multi-class flare probabilities:
+- P(B), P(C), P(M), P(X), and Overall Flare Probability
+
+### Slide 3: Expected Outcomes and Roadmap
+
+**Three expected outcomes:**
+1. **Combined SoLEXS and HEL1OS nowcasting catalog** — unified flare event catalog from both instruments
+2. **Forecasting system with quantifiable lead time** — measure how early a flare can be predicted before occurrence
+3. **Visual Dashboard** — current activity, forecasts, alerts, historical events, confidence scores
+
+**Roadmap from slide:**
+1. Download data from ISSDC portal
+2. **Characterize SXR/HXR temporal structures** — analyze temporal evolution, energy buildup, flux trends, precursor patterns (not just generic ML)
+3. Build unified master flare catalog
+4. Train time-series forecasting models
+
+### Slide 4: Resources and Evaluation
+
+**Allowed datasets:**
+- Primary: Aditya-L1 SoLEXS Level-1, Aditya-L1 HEL1OS Level-1
+- Supplementary (open-source): GOES catalog, SHARP magnetic parameters, Sunspot numbers
+
+**Evaluation requirements:**
+- Detection accuracy across low and high class flares
+- High True Positive Rate (catch real flares)
+- Low False Positive Rate (avoid noise triggers)
+- Low Lead Time (useful advance warning)
+
+**Metrics required:**
+- **Detection**: Precision, Recall, F1, TPR, FPR
+- **Classification**: Macro F1, Weighted F1
+- **Forecasting**: ROC-AUC, PR-AUC, Brier Score, Lead Time
+
+### Critical Design Implication
+
+The system is NOT a single time-series forecasting model. It is four modules:
+
+| Module | Input | Output |
+|---|---|---|
+| **Flare Detection** | Flux time series | Start, Peak, End |
+| **Flare Classification** | Detected event features | B/C/M/X class |
+| **Nowcasting** | Current observations | Current flare state + confidence |
+| **Forecasting** | Historical + physics features | P(flare) in next N min |
+
+All four modules must be designed with their unique objectives and evaluation criteria. All data sources (SoLEXS, HEL1OS, GOES, SHARP, sunspot) play equally important roles in temporal evolution analysis.
+
+---
+
+## 3. Project Goals
 
 ### Primary Goals
 
@@ -69,7 +148,64 @@ Think of it as a "weather radar" for solar storms — but powered by machine lea
 
 ---
 
-## 3. Data Sources
+## 4. Project Folder Structure
+
+```
+G:\Space-Weather-Intelligence-System\
+│
+├── README.md                          # Project documentation (this file)
+│
+├── .gitignore                         # Git ignore rules for ML artifacts & large files
+│
+├── data/                              # All datasets - raw and processed
+│   │
+│   ├── goes_flare_catalog/            # NOAA GOES X-ray flare catalog (CSV)
+│   │   ├── sci_xrsf-l2-flrpt_geo_y2024_v1-0-0.csv  # 2024 flare events
+│   │   ├── sci_xrsf-l2-flrpt_geo_y2025_v1-0-0.csv  # 2025 flare events
+│   │   └── sci_xrsf-l2-flrpt_geo_y2026_v1-0-0.csv  # 2026 flare events
+│   │   Purpose: Provides ground truth labels (start/peak/end times, class)
+│   │   for training detection, classification, and forecasting models.
+│   │
+│   ├── sharp_params/                  # SHARP magnetic parameters (CSV)
+│   │   ├── sharp_all.csv              # Combined SHARP data (all periods)
+│   │   ├── sharp_14day_test.csv       # 14-day sample for testing
+│   │   └── sharp_YYYYMMDD_YYYYMMDD.csv # Biweekly SHARP parameter files
+│   │   Purpose: Provides physics-based magnetic field features
+│   │   (USFLUX, TOTUSJH, R_VALUE, etc.) for flare precursor detection.
+│   │
+│   └── sunspot/                       # Daily sunspot numbers
+│       └── SN_d_tot_V2.0.txt          # International sunspot number (daily)
+│       Purpose: Provides solar cycle context (global activity level).
+│
+├── notebooks/                         # Jupyter notebooks (future)
+│   (to be created)                    # For EDA, prototyping, and experiments
+│
+├── src/                               # Source code (future)
+│   (to be created)                    # Organized by module:
+│       ├── detection/                 #   Wavelet + ML detection algorithms
+│       ├── classification/            #   B/C/M/X classifiers
+│       ├── nowcasting/                #   Real-time nowcasting engine
+│       ├── forecasting/              #   TFT and other forecast models
+│       ├── features/                  #   Feature engineering pipeline
+│       ├── data/                      #   Loaders, preprocessors, sync
+│       └── dashboard/                 #   Streamlit dashboard
+│
+├── models/                            # Trained model artifacts (future)
+│   (to be created, gitignored)
+│
+├── mlruns/                            # MLflow experiment logs (future)
+│   (to be created, gitignored)
+│
+├── docs/                              # Additional documentation (future)
+│   (to be created)
+│
+└── tests/                             # Unit and integration tests (future)
+    (to be created)
+```
+
+---
+
+## 5. Data Sources
 
 ### Primary (from Aditya-L1)
 
@@ -95,7 +231,7 @@ Think of it as a "weather radar" for solar storms — but powered by machine lea
 
 ---
 
-## 4. System Architecture (Big Picture)
+## 6. System Architecture (Big Picture)
 
 ```
                       ┌──────────────────────────────────────┐
@@ -152,7 +288,7 @@ Raw Data → Preprocessing → Detection → Catalog Merge → Feature Engineeri
 
 ---
 
-## 5. Stage 1: Data Engineering
+## 7. Stage 1: Data Engineering
 
 ### 5A. SoLEXS Preprocessing
 
@@ -214,7 +350,7 @@ Same as SoLEXS but with attention to:
 
 ---
 
-## 6. Stage 2: Detection Pipeline
+## 8. Stage 2: Detection Pipeline
 
 ### 6A. Independent Detectors
 
@@ -270,7 +406,7 @@ Use a **1D CNN** on short windows of flux:
 
 ---
 
-## 7. Stage 3: Classification Pipeline
+## 9. Stage 3: Classification Pipeline
 
 ### 7A. Task
 
@@ -309,7 +445,7 @@ X-class flares are rare (~1-5% of events). Use:
 
 ---
 
-## 8. Stage 4: Master Flare Catalog
+## 10. Stage 4: Master Flare Catalog
 
 ### 8A. Purpose
 
@@ -349,7 +485,7 @@ Two detections (one from SoLEXS, one from HEL1OS) are considered the **same flar
 
 ---
 
-## 9. Stage 5: Physics-Informed Feature Engineering
+## 11. Stage 5: Physics-Informed Feature Engineering
 
 ### 9A. Why Physics Matters
 
@@ -397,7 +533,7 @@ Solar flares are caused by magnetic reconnection in active regions. Pure flux ti
 
 ---
 
-## 10. Stage 6: Nowcasting System
+## 12. Stage 6: Nowcasting System
 
 ### 10A. What Nowcasting Means
 
@@ -461,7 +597,7 @@ Nowcasting answers: **"Is there a flare happening RIGHT NOW?"**
 
 ---
 
-## 11. Stage 7: Forecasting System
+## 13. Stage 7: Forecasting System
 
 ### 11A. What Forecasting Means
 
@@ -513,7 +649,7 @@ Forecast at time T:
 
 ---
 
-## 12. Model Benchmarking Strategy
+## 14. Model Benchmarking Strategy
 
 ### 12A. Use PyCaret for Initial Screening
 
@@ -559,7 +695,7 @@ Based on prior solar physics ML literature:
 
 ---
 
-## 13. Deep Learning Experiments
+## 15. Deep Learning Experiments
 
 ### 13A. Why Deep Learning?
 
@@ -612,7 +748,7 @@ Input: (batch, sequence_length, num_features)
 
 ---
 
-## 14. Advanced Temporal Models
+## 16. Advanced Temporal Models
 
 ### 14A. TCN (Temporal Convolutional Network)
 
@@ -653,7 +789,7 @@ Input → TCN layers → Attention(Query=TCN_out, Key=TCN_out, Value=TCN_out)
 
 ---
 
-## 15. Transformer-Based Models
+## 17. Transformer-Based Models
 
 ### 15A. Transformer Encoder
 
@@ -711,7 +847,7 @@ Quantile Outputs
 
 ---
 
-## 16. Physics-Informed Learning (PINN)
+## 18. Physics-Informed Learning (PINN)
 
 ### 16A. What is PINN?
 
@@ -768,63 +904,226 @@ We do **not** invent physics equations. Only use constraints that can be cited f
 
 ---
 
-## 17. Less Common Research Models
+## 19. Advanced Techniques from Research Papers
 
-### 17A. Neural ODE (Ordinary Differential Equations)
-
-| Aspect | Detail |
-|---|---|
-| **What it is** | Neural network that models the derivative of the hidden state, not the hidden state itself |
-| **Complexity** | High — requires ODE solvers, computationally expensive |
-| **Data req.** | Very high — needs dense, continuous time series |
-| **Expected benefit** | Could model continuous flux evolution better than discrete-time LSTM |
-| **Verdict** | ❌ Not recommended for hackathon timeframe. Too complex, benefit speculative |
-
-### 17B. Graph Neural Networks (GNN)
-
-| Aspect | Detail |
-|---|---|
-| **What it is** | Neural network on graph-structured data (nodes = active regions, edges = magnetic connectivity) |
-| **Complexity** | High — requires defining graph structure between active regions |
-| **Data req.** | Requires position/magnetic connectivity data beyond current datasets |
-| **Expected benefit** | Could model flare interactions between active regions |
-| **Verdict** | ❌ Not recommended. We lack multi-region connectivity data |
-
-### 17C. DeepAR (Amazon)
-
-| Aspect | Detail |
-|---|---|
-| **What it is** | Autoregressive RNN for probabilistic forecasting |
-| **Complexity** | Moderate |
-| **Data req.** | Moderate — needs multiple related time series |
-| **Expected benefit** | Probabilistic forecasts with uncertainty |
-| **Verdict** | ✅ Worth trying if TFT doesn't work. Simpler than TFT, less expressive |
-
-### 17D. Attention-based TCN
-
-| Aspect | Detail |
-|---|---|
-| **What it is** | TCN with attention mechanism on top |
-| **Complexity** | Moderate |
-| **Data req.** | Moderate |
-| **Expected benefit** | Combines TCN speed with attention interpretability |
-| **Verdict** | ✅ Good candidate. Recommended as TCN benchmark |
-
-### 17E. Physics-Informed Transformer
-
-| Aspect | Detail |
-|---|---|
-| **What it is** | Transformer with physics loss regularization |
-| **Complexity** | High |
-| **Data req.** | High |
-| **Expected benefit** | Combines transformer expressiveness with physical consistency |
-| **Verdict** | ✅ Recommended as secondary model. Primary = TFT |
+This section surveys the latest published research on solar flare forecasting with deep learning. These techniques are evaluated for potential integration into the system.
 
 ---
 
-## 18. Final Recommended Architecture
+### 19A. SolarFlareNet — Transformer + SHARP Time Series (2023)
 
-### 18A. Summary of Candidates
+**Source:** Abduallah et al., *Scientific Reports* 13, 13665 (2023). Extended with LIME/ALE interpretability (Gazula et al., FLAIRS 2024).
+
+**What it is:** A transformer-based framework predicting ≥C, ≥M, or ≥M5.0 class flares within 24-72 hours using SHARP time series.
+
+**Key findings:**
+- Operates on SHARP time series alone (no images needed)
+- Separate transformer per flare class head
+- Extended to probabilistic forecasts via calibration
+- Operational system running at NJIT
+
+**Integration:** Adapt same transformer-on-SHARP-time-series approach. Use as benchmark.
+
+**Verdict:** ✅ **Adopt** — proven operational system with same data modality
+
+---
+
+### 19B. Moirai2 — Foundational Transformer for Time Series (2025)
+
+**Source:** Riggi et al., *Astronomy & Computing* 55, 101042 (2026). arXiv:2510.23400.
+
+**What it is:** A pretrained foundational time-series transformer, fine-tuned on GOES X-ray flux for flare forecasting.
+
+**Key findings:**
+- Achieves **TSS ≈ 0.74** using irradiance-based temporal evolution alone
+- Outperforms image-based models (SigLIP2 TSS 0.60, VideoMAE TSS 0.65)
+- Pretrained on LOTSA (large time-series corpus) — patch-based processing
+- Time-series-only modality outperforms image/video modalities
+
+**Integration:** Fine-tune Moirai2 as alternative to training TFT from scratch. Lower risk, less data needed.
+
+**Verdict:** ✅ **Strong candidate** — pretrained foundation model reduces training data requirements
+
+---
+
+### 19C. Flare-PINN — Weak-Form Physics-Informed Learning (2025)
+
+**Source:** GitHub: Flare-PINN/Flare-PINN (MIT License)
+
+**What it is:** Hybrid PINN combining MHD constraints with deep learning for operational flare forecasting.
+
+**Key findings:**
+- **Weak-form PINN** outperforms strong-form PINN (+0.089 TSS at 12h, +0.038 at 24h)
+- Physics improves TSS by **+0.052 at 24h** over no-physics ablation (p=0.010)
+- Achieves **TSS 0.790 ± 0.007** at 24h horizon
+- Distance-to-corner (D2C) thresholding for optimal ROC performance
+
+**Integration:** Use weak-form approach for our physics-informed TFT — add MHD constraints as soft loss terms.
+
+**Verdict:** ✅ **Adopt weak-form PINN approach** — concrete implementation blueprint for physics regularization
+
+---
+
+### 19D. Decomposition-LSTM (DLSTM) with Sliding Windows (2025)
+
+**Source:** Hassani et al., *ApJS* 279, 27 (2025). arXiv:2507.05313.
+
+**What it is:** LSTM combined with time series decomposition (trend + seasonal) and sliding window pattern recognition using GOES flux.
+
+**Key findings:**
+- DLSTM + ensemble achieves **Recall 0.95, AUC 0.87, TSS 0.74**
+- Decomposition isolates noise from signal — critical for flare data
+- Regularized (3h interval) time series outperforms irregular
+- Sliding window detects temporal quasi-patterns across solar cycles
+
+**Integration:** Add STL decomposition before TFT/LSTM input. Decompose flux into trend + seasonal + residual components.
+
+**Verdict:** ✅ **Adopt decomposition preprocessing** — improves SNR for all downstream models
+
+---
+
+### 19E. N-HiTS — Neural Hierarchical Interpolation (2023)
+
+**Source:** Challu et al., *AAAI* 2023. arXiv:2201.12886.
+
+**What it is:** Neural architecture using hierarchical interpolation and multi-rate sampling for long-horizon forecasting.
+
+**Key findings:**
+- **20% average accuracy improvement** over Transformer baselines
+- **50x reduction** in computation time
+- Built-in interpretability via basis expansion
+- N-HiTS extends N-BEATS with covariate support and probabilistic outputs
+
+**Integration:** Lightweight alternative to TFT for forecasting horizons ≥30 min. Benchmark against TFT.
+
+**Verdict:** ✅ **Promising lightweight alternative** — especially for resource-constrained deployment
+
+---
+
+### 19F. Causal Attention Model (2024)
+
+**Source:** Zheng et al., *ApJS* 274, 38 (2024).
+
+**What it is:** Deep learning model with causal attention module that disentangles causal features from confounders.
+
+**Key findings:**
+- Improves TSS by 4-8% over non-causal baselines
+- Adaptive data split handles class imbalance dynamically
+- Focuses on causal precursors rather than spurious correlations
+
+**Integration:** Could be integrated into TFT's attention mechanism to reduce false alarms.
+
+**Verdict:** ⚠️ **Consider for Phase 5** — high complexity, promising for FPR reduction
+
+---
+
+### 19G. CNN-SE / CNN-CBAM / CNN-ECA Attention (2024)
+
+**Source:** Yan et al., *Astrophysics and Space Science* 369, 110 (2024).
+
+**What it is:** CNN models augmented with channel attention mechanisms for flare forecasting from magnetograms.
+
+**Key findings:**
+- CNN-SE achieves **TSS 0.984 for ≥C-class**, BSS 0.939 in real-time operation
+- CNN-ECA and ViT show best Recall for ≥M-class (0.799 and 0.855)
+- Real-time operational system since May 2023
+
+**Integration:** Add SE/ECA attention blocks to TCN baseline as lightweight enhancement.
+
+**Verdict:** ✅ **Add SE/ECA attention to TCN** — low computational cost, proven improvement
+
+---
+
+### 19H. FSPT — Flare Set-Prediction Transformer (2025)
+
+**Source:** MDPI *Universe* 11(6), 174 (2025).
+
+**What it is:** Transformer adapted from DETR (object detection) that directly forecasts a variable-sized set of flare events.
+
+**Key findings:**
+- Predicts set of events (start, peak, end, class) end-to-end
+- Bipartite matching loss handles variable number of events
+- Paradigm shift from binary classification to set prediction
+
+**Integration:** Could combine detection + forecasting in one model. Novel but unproven.
+
+**Verdict:** ⚠️ **Research-stage** — monitor for future adoption
+
+---
+
+### 19I. PINT — Physics-Informed Neural Time Series (2025)
+
+**Source:** Park et al., arXiv:2502.04018 (2025).
+
+**What it is:** Framework integrating physical constraints (e.g., SHM equation) into neural time series models.
+
+**Key findings:**
+- Physics constraints reduce data requirements
+- Improves long-term inference stability
+- Applies to any dynamics with known periodicity
+
+**Integration:** Add solar cycle (11-year) periodicity constraint for long-horizon forecasts.
+
+**Verdict:** ✅ **Consider periodic physics constraints** for solar cycle modulation
+
+---
+
+### 19J. 3DTCN — 3D Temporal Convolutional Networks (2025)
+
+**Source:** Guesmi et al., "EoFTCNets", Research Square (2025).
+
+**What it is:** Extends TCN to 3D for spatio-temporal analysis of active region patches.
+
+**Key findings:**
+- Captures spatial and temporal correlations simultaneously
+- Separate predictor modules per flare class
+- Nowcasting system (not just forecasting)
+
+**Integration:** If we add magnetogram data in future phases.
+
+**Verdict:** ❌ **Future consideration** — requires image data we don't currently have
+
+---
+
+### 19K. Comparison Summary
+
+| Technique | Year | Input | Key Metric | Operational? | Priority |
+|---|---|---|---|---|---|
+| **SolarFlareNet** (Transformer) | 2023 | SHARP TS | TSS >0.80 | ✅ Yes | **High** |
+| **Flare-PINN** (Weak-Form) | 2025 | SHARP TS | TSS 0.79 | ❌ Research | **High** |
+| **DLSTM + Decomposition** | 2025 | GOES flux | TSS 0.74 | ❌ Research | **Medium** |
+| **N-HiTS** (Hierarchical) | 2023 | Univariate TS | +20% vs Transformers | ❌ Research | **Medium** |
+| **CNN-SE/ECA** | 2024 | Magnetograms | TSS 0.984 (C) | ✅ Yes | **Medium** |
+| **Moirai2** (Foundation) | 2025 | GOES flux | TSS 0.74 | ❌ Research | **Medium** |
+| **Causal Attention** | 2024 | Magnetograms | TSS +4-8% | ❌ Research | **Low** |
+| **FSPT** (Set Prediction) | 2025 | Varied | Reported | ❌ Research | **Low** |
+| **PINT** (Physics NTS) | 2025 | Varied | Stable | ❌ Research | **Low** |
+| **3DTCN** | 2025 | Mag. video | Reported | ❌ Research | **Low** |
+
+### 19L. Research Integration Plan
+
+```
+Phase 2-3 (Core Pipeline):
+  ├── TFT (primary forecasting model)
+  ├── N-HiTS (lightweight alternative benchmark)
+  └── DLSTM decomposition preprocessing (all models)
+
+Phase 4 (Enhanced):
+  ├── Flare-PINN weak-form physics loss
+  ├── CNN-SE/ECA attention on TCN baseline
+  └── SolarFlareNet-style multi-head per-class outputs
+
+Phase 5 (Advanced):
+  ├── Causal attention for false positive rate reduction
+  ├── PINT periodic physics constraints (solar cycle)
+  └── Moirai2 fine-tuning experiment
+```
+
+---
+
+## 20. Final Recommended Architecture
+
+### 20A. Summary of Candidates
 
 | Rank | Model | Accuracy | Scientific Validity | Interpretability | Feasibility |
 |---|---|---|---|---|---|
@@ -834,7 +1133,7 @@ We do **not** invent physics equations. Only use constraints that can be cited f
 | D | Physics-Informed TFT | Highest | Highest | High | Medium |
 | E | Physics-Informed Transformer Encoder | High | High | Medium | Medium |
 
-### 18B. Final Recommendation: Temporal Fusion Transformer (TFT)
+### 20B. Final Recommendation: Temporal Fusion Transformer (TFT)
 
 **Why TFT wins:**
 
@@ -845,7 +1144,7 @@ We do **not** invent physics equations. Only use constraints that can be cited f
 5. **Proven in similar problems**: TFT has been successfully applied to energy forecasting, demand prediction, and climate time series
 6. **Implementation available**: PyTorch Forecasting library has a well-maintained TFT implementation
 
-### 18C. Complete Final Architecture
+### 20C. Complete Final Architecture
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
@@ -918,7 +1217,7 @@ We do **not** invent physics equations. Only use constraints that can be cited f
 
 ---
 
-## 19. Evaluation Strategy
+## 21. Evaluation Strategy
 
 ### 19A. Data Split Strategy
 
@@ -976,9 +1275,9 @@ Example:
 
 ---
 
-## 20. Deployment & Dashboard
+## 22. Deployment & Dashboard
 
-### 20A. Dashboard Framework
+### 22A. Dashboard Framework
 
 **Recommended:** Streamlit (Python)
 
@@ -989,7 +1288,7 @@ Reasoning:
 - Plotly integration for interactive charts
 - Simple to deploy
 
-### 20B. Dashboard Sections
+### 22B. Dashboard Sections
 
 ```
 ┌──────────────────────────────────────────────────────────┐
@@ -1028,7 +1327,7 @@ Reasoning:
 └──────────────────────────────────────────────────────────┘
 ```
 
-### 20C. API Endpoints
+### 22C. API Endpoints
 
 For integration with other systems:
 
@@ -1039,7 +1338,7 @@ For integration with other systems:
 | `/api/catalog` | GET | Master flare catalog |
 | `/api/nowcast` | GET | Nowcasting alert details |
 
-### 20D. Real-Time Update Cycle
+### 22D. Real-Time Update Cycle
 
 ```
 Every 1 second:
@@ -1062,7 +1361,7 @@ Every 6 hours:
 
 ---
 
-## 21. Ablation Study Plan
+## 23. Ablation Study Plan
 
 Ablation studies answer: "Which components actually contribute to performance?"
 
@@ -1105,7 +1404,7 @@ Ablation studies answer: "Which components actually contribute to performance?"
 
 ---
 
-## 22. Research-Grade Experimentation Plan
+## 24. Research-Grade Experimentation Plan
 
 ### 22A. Experiment Tracking
 
@@ -1146,7 +1445,7 @@ Use **MLflow** for:
 
 ---
 
-## 23. Implementation Roadmap
+## 25. Implementation Roadmap
 
 ### Phase 1: Foundation (Week 1)
 
