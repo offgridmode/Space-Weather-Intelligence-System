@@ -1,0 +1,38 @@
+{
+  "15": {
+    "XGBoost": {
+      "accuracy": 0.8741898148148148,
+      "precision": 0.09115281501340483,
+      "recall": 0.043478260869565216,
+      "f1": 0.05887445887445888,
+      "roc_auc": 0.5211101592916206,
+      "avg_precision": 0.09526924017110827,
+      "brier": 0.1064256389089961,
+      "true_negatives": 7519,
+      "false_positives": 339,
+      "false_negatives": 748,
+      "true_positives": 34,
+      "support": 8640,
+      "flare_ratio": 0.09050925925925926,
+      "_time": 3.1007277965545654
+    }
+  },
+  "30": {
+    "XGBoost": {
+      "accuracy": 0.6386574074074074,
+      "precision": 0.162428219852338,
+      "recall": 0.2682926829268293,
+      "f1": 0.20235053653551355,
+      "roc_auc": 0.5153806048459703,
+      "avg_precision": 0.16441534022536303,
+      "brier": 0.24784756646029057,
+      "true_negatives": 5122,
+      "false_positives": 2042,
+      "false_negatives": 1080,
+      "true_positives": 396,
+      "support": 8640,
+      "flare_ratio": 0.17083333333333334,
+      "_time": 1.691368818283081
+    }
+  }
+}
