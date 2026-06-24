@@ -1,0 +1,42 @@
+# Large data files - use Git LFS or download separately
+data/sharp_params/sharp_all.csv
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+*.egg
+dist/
+build/
+.eggs/
+
+# Environment
+.env
+.venv/
+env/
+venv/
+virtualenv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+Thumbs.db
+.DS_Store
+
+# ML artifacts
+mlruns/
+models/
+checkpoints/
+*.pt
+*.pth
+*.h5
+*.onnx
+
+# Logs
+logs/
+*.log
