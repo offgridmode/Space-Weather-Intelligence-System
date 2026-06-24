@@ -34,11 +34,11 @@ class XGBoostForecaster:
     def _create_features(self, df: pd.DataFrame) -> pd.DataFrame:
         feats = df.copy()
         if "flux" in feats.columns:
-            for lag in [1, 5, 15, 30, 60]:
-                feats[f"flux_lag_{lag}"] = feats["flux"].shift(lag * 60)
-            feats["flux_ma_5"] = feats["flux"].rolling(300, min_periods=1).mean()
-            feats["flux_ma_15"] = feats["flux"].rolling(900, min_periods=1).mean()
-            feats["flux_ma_30"] = feats["flux"].rolling(1800, min_periods=1).mean()
+            for lag_min in [1, 5, 15, 30, 60]:
+                feats[f"flux_lag_{lag_min}"] = feats["flux"].shift(lag_min)
+            feats["flux_ma_5"] = feats["flux"].rolling(5, min_periods=1).mean()
+            feats["flux_ma_15"] = feats["flux"].rolling(15, min_periods=1).mean()
+            feats["flux_ma_30"] = feats["flux"].rolling(30, min_periods=1).mean()
             feats["flux_dt"] = feats["flux"].diff().clip(lower=0)
         return feats.fillna(0)
 

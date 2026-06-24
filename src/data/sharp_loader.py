@@ -6,9 +6,9 @@ from src.config import SHARP_DIR, SHARP_FILES
 
 SHARP_FEATURES = [
     "USFLUX", "TOTUSJH", "TOTUSJZ", "R_VALUE",
-    "TOTPOT", "TOTBSQ", "MEANPOT", "MEANSHR",
-    "SHRGT45", "MEANGAM", "MEANALP", "TOTFZ",
-    "EPSY", "EPSZ", "ABSNJZH", "SAVNCPP",
+    "AREA_ACR", "TOTPOT", "MEANPOT", "MEANGBZ",
+    "SHRGT45", "MEANGAM", "MEANALP", "TOTFZD",
+    "EPSY", "EPSZ", "SAVNCPP", "MEANJZD",
 ]
 
 
@@ -32,13 +32,14 @@ def load_sharp_clean() -> pd.DataFrame:
     df = df.rename(columns=rename)
     time_col = None
     for c in cols:
-        if "DATE" in c or "TIME" in c:
+        if c == "T_REC" or "DATE" in c or "TIME" in c:
             time_col = c
             break
     if time_col is None:
         time_col = df.columns[0]
     df = df.rename(columns={time_col: "timestamp"})
-    df["timestamp"] = pd.to_datetime(df["timestamp"], errors="coerce")
+    ts = df["timestamp"].astype(str).str.replace("_TAI", "", regex=False)
+    df["timestamp"] = pd.to_datetime(ts, format="%Y.%m.%d_%H:%M:%S", errors="coerce")
     df = df.dropna(subset=["timestamp"])
     available = [c for c in SHARP_FEATURES if c in df.columns]
     keep = ["timestamp"] + available
@@ -55,11 +56,11 @@ def compute_physics_features(sharp_df: pd.DataFrame) -> pd.DataFrame:
     available = df.columns.tolist()
     if "USFLUX" in available and "TOTUSJH" in available:
         df["magnetic_instability_index"] = df["USFLUX"].abs() * df["TOTUSJH"].abs()
-    if "TOTPOT" in available and "TOTBSQ" in available:
-        df["free_energy_proxy"] = df["TOTPOT"].fillna(0) - df["TOTBSQ"].fillna(0)
+    if "TOTPOT" in available and "AREA_ACR" in available:
+        df["free_energy_proxy"] = df["TOTPOT"].fillna(0) - df["AREA_ACR"].fillna(0)
     if "TOTUSJZ" in available and "TOTUSJH" in available:
         denom = df["TOTUSJH"].replace(0, np.nan)
         df["magnetic_twist"] = df["TOTUSJZ"].abs() / denom.abs()
-    if "MEANSHR" in available:
-        df["mean_shear"] = df["MEANSHR"]
+    if "MEANGBZ" in available:
+        df["mean_shear"] = df["MEANGBZ"]
     return df

@@ -183,17 +183,19 @@ class SpaceWeatherPipeline:
             flux = self.hel1os_data["flux"]
         if flux is None:
             return {}
-        df = pd.DataFrame(index=flux.index)
-        df["flux"] = flux.values
+        flux_ds = flux.resample("1min").mean()
+        df = pd.DataFrame(index=flux_ds.index)
+        df["flux"] = flux_ds.values
+        sunspot = self.sunspot_data if self.sunspot_data is not None and not self.sunspot_data.empty else pd.DataFrame()
         if self.sharp_data is not None:
             aligned = compute_aligned_physics_features(
-                flux.index, self.sharp_data, self.sunspot_data or pd.DataFrame()
+                flux_ds.index, self.sharp_data, sunspot
             )
             for c in aligned.columns:
                 df[c] = aligned[c].values
         if self.goes_catalog is not None:
             labels = get_flare_labels(
-                self.goes_catalog, flux.index, lookback_minutes=horizon_minutes
+                self.goes_catalog, flux_ds.index, lookback_minutes=horizon_minutes
             )
             df["flare_label"] = labels["flare_within_window"].values
         else:
